@@ -515,7 +515,6 @@ with st.sidebar:
     st.markdown("""
     <div style="margin-bottom: 12px;">
         <span class="capability-tag">◈ SymPy Math Engine</span>
-        <span class="capability-tag">◈ Wolfram Alpha</span>
         <span class="capability-tag">◈ Wikipedia Encyclopedia</span>
         <span class="capability-tag">◈ YouTube Lecture Finder</span>
         <span class="capability-tag">◈ Live Academic Web</span>
@@ -672,7 +671,7 @@ with tab_chat:
             )
 
             tool_labels = {
-                "solve_math": "◈ Math Engine (SymPy & Wolfram)",
+                "solve_math": "◈ Math Engine (SymPy)",
                 "search_document": "◈ Document RAG (Uploaded PDF)",
                 "search_wikipedia": "◈ Wikipedia Encyclopedia",
                 "find_educational_videos": "◈ YouTube Educational Videos",

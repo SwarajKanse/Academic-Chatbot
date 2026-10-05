@@ -19,7 +19,6 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 DEFAULT_GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-WOLFRAM_ALPHA_APPID = os.getenv("WOLFRAM_ALPHA_APPID")
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
 
@@ -63,7 +62,7 @@ STUDENT_TOOLS = [
         "type": "function",
         "function": {
             "name": "solve_math",
-            "description": "Perform exact mathematical derivations, symbolic calculus (integrals, derivatives, limits), linear algebra, or equation solving using SymPy and Wolfram Alpha.",
+            "description": "Perform exact mathematical derivations, symbolic calculus (integrals, derivatives, limits), linear algebra, or equation solving using the SymPy symbolic engine.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -168,7 +167,7 @@ CRITICAL DIRECTIVES:
 class AcademicRAGEngine:
     """
     Intelligent Multi-Tool Academic Engine.
-    Combines In-Memory Document RAG, SymPy & Wolfram Alpha Math,
+    Combines In-Memory Document RAG, SymPy Symbolic Math Engine,
     Wikipedia Encyclopedia, YouTube Educational Video Search, and Live Web Search.
     """
     def __init__(self, groq_api_key: str = None, model: str = None):
@@ -302,28 +301,8 @@ class AcademicRAGEngine:
         return ("\n\n---\n\n".join(formatted), chunks)
 
     def tool_solve_math(self, expression_or_problem: str) -> str:
-        """Solves math via SymPy and Wolfram Alpha."""
+        """Solves math via SymPy symbolic engine."""
         p_clean = expression_or_problem.strip()
-        results = []
-
-        # 1. Wolfram Alpha check (if key configured)
-        wolfram_app_id = os.getenv("WOLFRAM_ALPHA_APPID") or WOLFRAM_ALPHA_APPID
-        if wolfram_app_id:
-            try:
-                import wolframalpha
-                client = wolframalpha.Client(wolfram_app_id)
-                res = client.query(p_clean)
-                pods = []
-                for pod in getattr(res, "pods", []):
-                    for sub in pod.subpods:
-                        if sub.plaintext:
-                            pods.append(f"**{pod.title}**: {sub.plaintext}")
-                if pods:
-                    results.append("### Wolfram Alpha Result:\n" + "\n".join(pods[:4]))
-            except Exception as e:
-                print(f"Wolfram Alpha error: {e}")
-
-        # 2. SymPy Symbolic Solver
         x, y, z, t, n = sp.symbols('x y z t n')
         p_lower = p_clean.lower()
         sympy_output = ""
@@ -384,10 +363,7 @@ class AcademicRAGEngine:
         except Exception as e:
             sympy_output = f"SymPy evaluation note: {str(e)}"
 
-        if sympy_output:
-            results.append("### SymPy Symbolic Computation:\n" + sympy_output)
-
-        return "\n\n".join(results) if results else f"Computed: {p_clean}"
+        return f"### SymPy Symbolic Engine:\n{sympy_output}" if sympy_output else f"Computed: {p_clean}"
 
     def tool_search_wikipedia(self, topic: str) -> str:
         """Looks up encyclopedic summary."""

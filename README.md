@@ -8,7 +8,7 @@ A high-accuracy, zero-hallucination academic assistant built in Python for unive
 
 | Capability | Generic Chatbots (ChatGPT / Gemini) | Intelligent Study Assistant |
 |---|---|---|
-| **Mathematical Precision** | Struggles with complex symbolic calculus & limits | **Exact Symbolic Math** via local SymPy engine & Wolfram Alpha |
+| **Mathematical Precision** | Struggles with complex symbolic calculus & limits | **Exact Symbolic Math** via local SymPy engine |
 | **Academic Document RAG** | High hallucination; vague citations | **Exact Page-Level Provenance** (`[Page X]`) + Verbatim citations |
 | **Multi-Tool Autonomy** | Relies on generic search or single prompt | **Multi-Turn Autonomous Routing** (Math, Wikipedia, YouTube, Web) |
 | **Educational Video Curation** | Generates broken or non-existent URLs | **Direct Verified Lecture Links** (NPTEL, Abdul Bari, MIT OCW) |
@@ -20,11 +20,10 @@ A high-accuracy, zero-hallucination academic assistant built in Python for unive
 ## 🛠️ Integrated Student Tools
 
 1. **SymPy Symbolic Math Engine:** Computes step-by-step integrals ($\int$), derivatives ($\frac{d}{dx}$), limits ($\lim$), matrix operations, and quadratic equations.
-2. **Wolfram Alpha Integration:** Optional computational knowledge queries when `WOLFRAM_ALPHA_APPID` is provided.
-3. **Wikipedia Encyclopedia:** Instant lookup of scientific definitions, historical biographies, and theorems.
-4. **YouTube Educational Lecture Finder:** Recommends curated video lectures, playlist tutorials, and visual walkthroughs.
-5. **Live Academic Web Search:** DuckDuckGo-powered real-time retrieval for exam syllabi, college notices, and academic roadmaps.
-6. **In-Memory Academic RAG:** Sublinear TF-IDF + token overlap retrieval tracking exact PDF pages and chapters.
+2. **Wikipedia Encyclopedia:** Instant lookup of scientific definitions, historical biographies, and theorems.
+3. **YouTube Educational Lecture Finder:** Recommends curated video lectures, playlist tutorials, and visual walkthroughs.
+4. **Live Academic Web Search:** DuckDuckGo-powered real-time retrieval for exam syllabi, college notices, and academic roadmaps.
+5. **In-Memory Academic RAG:** Sublinear TF-IDF + token overlap retrieval tracking exact PDF pages and chapters.
 
 ---
 
