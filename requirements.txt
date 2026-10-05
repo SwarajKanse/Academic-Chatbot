@@ -1,0 +1,11 @@
+streamlit>=1.35.0
+groq>=0.30.0
+pypdf>=4.0.0
+scikit-learn>=1.4.0
+numpy>=1.26.0
+sympy>=1.12.0
+wikipedia-api>=0.6.0
+ddgs>=9.0.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+wolframalpha>=5.0.0
