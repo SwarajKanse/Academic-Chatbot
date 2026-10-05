@@ -113,15 +113,47 @@ st.markdown("""
         letter-spacing: -0.02em !important;
     }
 
-    p, span, li {
+    p, li, .stMarkdown p, .stMarkdown li, .stMarkdown span {
         color: var(--on-surface) !important;
-        font-family: 'Inter', sans-serif !important;
+        font-family: 'Inter', -apple-system, sans-serif !important;
         line-height: 1.68 !important;
         font-size: 0.96rem !important;
     }
 
+    /* Protect all Streamlit icons & ligatures from font overrides */
+    [data-testid*="stIcon"],
+    [data-testid="stIconMaterial"],
+    .material-symbols-rounded,
+    .material-icons,
+    [data-testid="stFileUploader"] svg {
+        font-family: "Material Symbols Rounded", "Source Sans Pro", sans-serif !important;
+    }
+
     code, pre, .mono-badge {
         font-family: 'JetBrains Mono', monospace !important;
+    }
+
+    /* Sleek Sidebar File Uploader Dropzone */
+    [data-testid="stFileUploader"] section {
+        padding: 0 !important;
+    }
+    [data-testid="stFileUploaderDropzone"] {
+        background-color: var(--surface-subtle) !important;
+        border: 1px dashed var(--border-outline) !important;
+        border-radius: 12px !important;
+        padding: 14px 10px !important;
+        transition: all 0.2s ease !important;
+    }
+    [data-testid="stFileUploaderDropzone"]:hover {
+        border-color: var(--accent-lavender) !important;
+        background-color: var(--surface-elevated) !important;
+    }
+    [data-testid="stFileUploaderDropzone"] button {
+        background-color: var(--surface-elevated) !important;
+        color: var(--accent-lavender) !important;
+        border: 1px solid var(--border-outline) !important;
+        border-radius: 8px !important;
+        font-size: 0.82rem !important;
     }
 
     /* Top App Bar */
@@ -319,25 +351,35 @@ st.markdown("""
     }
 
     /* Modern Pill Input Bar (ChatGPT / Claude floating style) */
+    div[data-testid="stBottom"] {
+        background: linear-gradient(180deg, transparent 0%, rgba(18, 19, 22, 0.95) 45%, #121316 100%) !important;
+        padding-bottom: 20px !important;
+        padding-top: 10px !important;
+    }
+    div[data-testid="stBottom"] > div {
+        max-width: 840px !important;
+        margin: 0 auto !important;
+    }
+
     div[data-testid="stChatInput"] {
-        border-radius: 24px !important;
+        border-radius: 28px !important;
         border: 1px solid var(--border-outline) !important;
         background-color: var(--surface-subtle) !important;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45) !important;
-        padding: 4px 10px !important;
-        transition: all 0.2s ease-in-out !important;
+        box-shadow: 0 10px 36px rgba(0, 0, 0, 0.5) !important;
+        padding: 5px 12px !important;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
         max-width: 840px !important;
         margin: 0 auto !important;
     }
 
     div[data-testid="stChatInput"]:focus-within {
         border-color: var(--accent-lavender) !important;
-        box-shadow: 0 0 0 2px rgba(192, 193, 255, 0.2), 0 10px 40px rgba(0, 0, 0, 0.55) !important;
+        box-shadow: 0 0 0 2px rgba(192, 193, 255, 0.25), 0 12px 42px rgba(0, 0, 0, 0.65) !important;
     }
 
     div[data-testid="stChatInput"] textarea {
         color: var(--on-surface) !important;
-        font-family: 'Inter', sans-serif !important;
+        font-family: 'Inter', -apple-system, sans-serif !important;
         font-size: 0.95rem !important;
     }
 
@@ -531,14 +573,20 @@ with st.sidebar:
         if st.button("Summary", use_container_width=True, disabled=chunks_count == 0):
             with st.spinner("Generating executive summary..."):
                 st.session_state.study_tool_result = engine.generate_study_tool("summary")
+                st.toast("Executive Summary ready in Study Lab tab!", icon="📑")
+                st.rerun()
     with col2:
         if st.button("Practice Quiz", use_container_width=True, disabled=chunks_count == 0):
             with st.spinner("Generating quiz..."):
                 st.session_state.study_tool_result = engine.generate_study_tool("quiz")
+                st.toast("Practice Quiz ready in Study Lab tab!", icon="📝")
+                st.rerun()
 
     if st.button("Flashcards Deck", use_container_width=True, disabled=chunks_count == 0):
         with st.spinner("Extracting flashcards..."):
             st.session_state.study_tool_result = engine.generate_study_tool("flashcards")
+            st.toast("Flashcards Deck ready in Study Lab tab!", icon="📇")
+            st.rerun()
 
     st.markdown("---")
     if st.button("Reset Chat Session", use_container_width=True):
@@ -550,6 +598,7 @@ with st.sidebar:
 # --- MAIN DISPLAY: Minimalist Top Bar ---
 chunks_stat = st.session_state.stats["chunks"]
 pages_stat = st.session_state.stats["pages"]
+clean_model = engine.model.split("/")[-1].upper() if "/" in engine.model else engine.model
 
 st.markdown(f"""
 <div class="top-bar">
@@ -558,7 +607,7 @@ st.markdown(f"""
         <span class="brand-badge">Multi-Tool RAG</span>
     </div>
     <div class="telemetry-group">
-        <span class="telemetry-pill">Model: <strong>{engine.model}</strong></span>
+        <span class="telemetry-pill">Model: <strong>{clean_model}</strong></span>
         <span class="telemetry-pill">Pages: <strong>{pages_stat}</strong></span>
         <span class="telemetry-pill">Chunks: <strong>{chunks_stat}</strong></span>
     </div>
