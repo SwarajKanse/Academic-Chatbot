@@ -35,16 +35,32 @@ def format_academic_markdown(text: str) -> str:
     # 2. Clean horizontal rule tags
     text = re.sub(r"</?hr\s*/?>", "\n\n---\n\n", text, flags=re.IGNORECASE)
 
+    # Set aside existing $$ ... $$ blocks so the delimiter rewrites below don't touch
+    # LaTeX inside them (e.g. the "\\[4pt]" row spacing in an aligned environment).
+    math_blocks = []
+
+    def _stash(m):
+        math_blocks.append(m.group(0))
+        return f"\x00MATH{len(math_blocks) - 1}\x00"
+
+    text = re.sub(r"\$\$.*?\$\$", _stash, text, flags=re.DOTALL)
+
+    # A real \[ or \( delimiter is not preceded by another backslash ("\\[" is a line break)
+    display = r"(?<!\\)\\\[(.*?)(?<!\\)\\\]"
+    to_display = lambda m: f"\n\n$$\n{m.group(1).strip()}\n$$\n\n"
+
     # 3. Convert explicit LaTeX display delimiters \[ ... \] to isolated $$ ... $$
-    text = re.sub(r"\\\[(.*?)\\\]", lambda m: f"\n\n$$\n{m.group(1).strip()}\n$$\n\n", text, flags=re.DOTALL)
+    text = re.sub(display, to_display, text, flags=re.DOTALL)
 
     # 4. Convert explicit LaTeX inline delimiters \( ... \) to $ ... $
-    text = re.sub(r"\\\((.*?)\\\)", lambda m: f"${m.group(1).strip()}$", text, flags=re.DOTALL)
+    text = re.sub(r"(?<!\\)\\\((.*?)(?<!\\)\\\)", lambda m: f"${m.group(1).strip()}$", text, flags=re.DOTALL)
 
     # 5. Handle unclosed \[ during active live typing
-    if r"\[" in text and r"\]" not in text[text.rfind(r"\["):]:
-        text = text + r" \]"
-        text = re.sub(r"\\\[(.*?)\\\]", lambda m: f"\n\n$$\n{m.group(1).strip()}\n$$\n\n", text, flags=re.DOTALL)
+    opener = list(re.finditer(r"(?<!\\)\\\[", text))
+    if opener:
+        text = text[:opener[-1].start()] + re.sub(display, to_display, text[opener[-1].start():] + r" \]", flags=re.DOTALL)
+
+    text = re.sub(r"\x00MATH(\d+)\x00", lambda m: math_blocks[int(m.group(1))], text)
 
     # 6. Ensure balanced $$ delimiters
     if text.count("$$") % 2 != 0:
