@@ -185,6 +185,9 @@ CRITICAL GROUNDING DIRECTIVES:
    - Format display/block formulas with double dollar signs on their own lines: `$$ <equation> $$`.
    - Format inline expressions with single dollar signs: `$ <var> $`.
    - Never output raw HTML tags like `<br>`, `<p>`, `<hr>`. Use clean standard Markdown.
+
+5. OVERVIEW AND SUMMARY INQUIRIES:
+   - When the student asks what the document/PDF is about, what topics it covers, or asks for an overview or summary, provide a clear, structured overview using the provided document title, introductory pages, and section excerpts.
 """
 
 
@@ -477,6 +480,24 @@ class AcademicRAGEngine:
             return self.tool_search_web(args.get("query", "")), []
         return f"Unknown tool: {tool_name}", []
 
+    def _is_overview_query(self, query: str) -> bool:
+        """Determines if the query is asking about the document/PDF as a whole."""
+        q = query.lower().strip()
+        patterns = [
+            r'\bwhat\s+(is|are|was)\s+(the|this|it)\s+(pdf|document|file|notes|book|paper|syllabus)\b',
+            r'\bwhat\s+(is|are)\s+it\s+about\b',
+            r'\bwhat\s+(is|are)\s+this\s+about\b',
+            r'\b(what\s+is\s+this|what\'s\s+this)\b',
+            r'\b(about\s+the|about\s+this)\s+(pdf|document|file)\b',
+            r'\b(summarize|summary|overview|outline|table\s+of\s+contents)\b',
+            r'\bwhat\s+does\s+this\s+(pdf|document|file)\s+(contain|cover|discuss|say)\b',
+            r'\bwhat\s+(topics|subjects)\s+(are|is)\s+covered\b',
+            r'\btell\s+me\s+about\s+(this|the)\s+(pdf|document|file)\b',
+            r'\bexplain\s+(this|the)\s+(pdf|document|file)\b',
+            r'\bwhich\s+(pdf|document|file|course|subject)\b'
+        ]
+        return any(re.search(p, q) for p in patterns)
+
     def generate_answer_stream(
         self, query: str, history: List[Dict] = None, strict_mode: bool = True
     ) -> Generator[Tuple[Dict[str, Any], List[DocumentChunk]], None, None]:
@@ -498,20 +519,41 @@ class AcademicRAGEngine:
                 yield ({"type": "token", "content": "⚠️ **No documents uploaded.** In Strict RAG (Grounded Mode), answers are generated exclusively from your uploaded documents. Please upload one or more PDFs in the sidebar to ask questions."}, [])
                 return
 
-            # 2. Retrieve relevant document excerpts
-            retrieved = self.retrieve(query, top_k=6)
             used_chunks: List[DocumentChunk] = []
             context_blocks: List[str] = []
 
-            for c, score in retrieved:
-                if score > 0.03:
-                    used_chunks.append(c)
-                    context_blocks.append(f"--- [Source: {c.source} | Page {c.page}] ---\n{c.text}")
+            # 2. Check if this is an overview query asking what the document/PDF is about
+            if self._is_overview_query(query):
+                # Overview inquiry: pick introductory chunks (Page 1 & 2) + distributed sample
+                p1_p2 = [c for c in self.chunks if c.page in (1, 2)][:4]
+                used_chunks.extend(p1_p2)
 
-            if not used_chunks and retrieved and retrieved[0][1] > 0.005:
-                for c, _ in retrieved[:2]:
-                    used_chunks.append(c)
+                remaining = [c for c in self.chunks if c not in used_chunks]
+                if remaining:
+                    step = max(1, len(remaining) // 3)
+                    for i in range(0, len(remaining), step):
+                        if len(used_chunks) < 7:
+                            used_chunks.append(remaining[i])
+
+                for c in used_chunks:
                     context_blocks.append(f"--- [Source: {c.source} | Page {c.page}] ---\n{c.text}")
+            else:
+                # Specific content query: run hybrid retrieval
+                retrieved = self.retrieve(query, top_k=6)
+                for c, score in retrieved:
+                    if score > 0.03:
+                        used_chunks.append(c)
+                        context_blocks.append(f"--- [Source: {c.source} | Page {c.page}] ---\n{c.text}")
+
+                # If user specifically asked about a page number e.g. "page 2"
+                page_match = re.search(r'\bpage\s*(\d+)\b', query.lower())
+                if page_match:
+                    req_page = int(page_match.group(1))
+                    page_chunks = [c for c in self.chunks if c.page == req_page]
+                    for c in page_chunks:
+                        if c not in used_chunks:
+                            used_chunks.append(c)
+                            context_blocks.append(f"--- [Source: {c.source} | Page {c.page}] ---\n{c.text}")
 
             context_text = "\n\n".join(context_blocks) if context_blocks else "[No relevant document excerpts found in uploaded files for this query]"
 
@@ -523,7 +565,11 @@ class AcademicRAGEngine:
                 for turn in history[-4:]:
                     messages.append({"role": turn["role"], "content": turn["content"]})
 
-            user_content = f"""DOCUMENT EXCERPTS:
+            doc_info = f"DOCUMENT INFORMATION:\n- File(s): {', '.join(self.doc_names) if self.doc_names else 'Uploaded PDF'}\n- Total pages: {self.total_pages}\n- Total indexed sections: {len(self.chunks)}"
+
+            user_content = f"""{doc_info}
+
+DOCUMENT EXCERPTS:
 {context_text}
 
 USER QUESTION:
@@ -531,7 +577,8 @@ USER QUESTION:
 
 CRITICAL INSTRUCTION:
 Answer the question using strictly and exclusively the facts in the document excerpts above.
-If the answer is not present in the excerpts, you MUST answer:
+If the student asks what the document is about or asks for an overview/summary, synthesize a structured summary using the title and excerpts above.
+If the student asks for specific facts or details not present in the excerpts above, state strictly:
 "The provided document(s) do not contain information to answer this question."
 Do NOT provide answers from external knowledge or the web."""
 
