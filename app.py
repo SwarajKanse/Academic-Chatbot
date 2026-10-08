@@ -75,7 +75,7 @@ def format_academic_markdown(text: str) -> str:
 
 TOOL_LABELS = {
     "solve_math": "Math engine",
-    "search_document": "Your documents",
+    "search_document": "Grounded document excerpts",
     "search_wikipedia": "Wikipedia",
     "find_educational_videos": "YouTube",
     "search_academic_web": "Web search",
@@ -86,6 +86,13 @@ SUGGESTIONS = [
     "Integrate x * exp(x)",
     "Explain Dijkstra's algorithm and find a good lecture on it",
     "How should I plan my GATE preparation?",
+]
+
+DOC_SUGGESTIONS = [
+    "Summarize the main topics and key takeaways from this document",
+    "What are the core definitions and concepts introduced?",
+    "Extract all key equations, formulas, or algorithms with page citations",
+    "What specific conclusions or exam takeaways are highlighted?",
 ]
 
 st.set_page_config(page_title="Study Assistant", layout="centered")
@@ -107,6 +114,16 @@ st.markdown("""
     [data-testid="stBaseButton-tertiary"] { color: #2f5d50; }
     [data-testid="stBaseButton-tertiary"]:hover { text-decoration: underline; }
     .tools-used { font-size: 0.8rem; color: #8a867c; margin-bottom: 0.25rem; }
+    .grounded-badge {
+        font-size: 0.78rem;
+        color: #2f5d50;
+        background: rgba(47, 93, 80, 0.08);
+        border: 1px solid rgba(47, 93, 80, 0.2);
+        border-radius: 6px;
+        padding: 2px 8px;
+        display: inline-block;
+        margin-bottom: 0.5rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -153,6 +170,12 @@ with st.sidebar:
             st.session_state.indexed_files = current_names
             st.rerun()
 
+    strict_mode = st.toggle(
+        "Strict RAG (Grounded Mode)",
+        value=True,
+        help="When enabled, answers are strictly limited to your uploaded documents. If the answer is not in the document, no external answer is provided."
+    )
+
     if has_docs:
         st.subheader("Study tools")
         for label, kind in [("Summary", "summary"), ("Quiz", "quiz"), ("Flashcards", "flashcards")]:
@@ -171,14 +194,27 @@ with st.sidebar:
 
 # Main
 st.title("Study Assistant")
+if strict_mode:
+    st.markdown('<div class="grounded-badge">🔒 Strict Grounded Mode: Answering exclusively from uploaded documents</div>', unsafe_allow_html=True)
 
 if not st.session_state.messages:
-    st.write("Ask about a concept, work through a problem, or upload your notes in the sidebar.")
-    st.caption("Try one of these")
-    for i, s in enumerate(SUGGESTIONS):
-        if st.button(f"→ {s}", key=f"suggest{i}", type="tertiary"):
-            st.session_state.pending_prompt = s
-            st.rerun()
+    if has_docs:
+        st.write(f"Indexed: **{', '.join(st.session_state.indexed_files)}** ({len(engine.chunks)} sections)")
+        st.caption("Ask questions about your uploaded material or try one of these")
+        for i, s in enumerate(DOC_SUGGESTIONS):
+            if st.button(f"→ {s}", key=f"docsuggest{i}", type="tertiary"):
+                st.session_state.pending_prompt = s
+                st.rerun()
+    elif strict_mode:
+        st.write("Upload your lecture notes, textbook, or syllabus PDF in the sidebar to ask grounded questions.")
+        st.caption("In Strict Grounded Mode, the assistant refuses external knowledge and answers solely from your document.")
+    else:
+        st.write("Ask about a concept, work through a problem, or upload your notes in the sidebar.")
+        st.caption("Try one of these")
+        for i, s in enumerate(SUGGESTIONS):
+            if st.button(f"→ {s}", key=f"suggest{i}", type="tertiary"):
+                st.session_state.pending_prompt = s
+                st.rerun()
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -187,7 +223,7 @@ for msg in st.session_state.messages:
         st.markdown(format_academic_markdown(msg["content"]), unsafe_allow_html=True)
         show_sources(msg.get("sources"))
 
-user_input = st.chat_input("Ask a question")
+user_input = st.chat_input("Ask a question about your document" if (strict_mode and has_docs) else "Ask a question")
 prompt = user_input or st.session_state.pending_prompt
 st.session_state.pending_prompt = None
 
@@ -203,7 +239,11 @@ if prompt:
         used_chunks = []
         tools = []
 
-        stream = engine.generate_answer_stream(query=prompt, history=st.session_state.messages[:-1])
+        stream = engine.generate_answer_stream(
+            query=prompt,
+            history=st.session_state.messages[:-1],
+            strict_mode=strict_mode
+        )
         for event, retrieved_chunks in stream:
             if isinstance(event, dict):
                 if event.get("type") == "tool_start":

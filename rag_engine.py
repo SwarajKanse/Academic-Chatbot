@@ -164,6 +164,30 @@ CRITICAL DIRECTIVES:
 """
 
 
+STRICT_RAG_SYSTEM_PROMPT = """You are an Academic Grounded RAG Assistant operating in STRICT GROUNDED MODE.
+Your task is to answer the student's question SOLELY and EXCLUSIVELY based on the provided document excerpts.
+
+CRITICAL GROUNDING DIRECTIVES:
+1. STRICT DOCUMENT BOUNDARY:
+   - Your answers MUST be completely grounded in and supported by the provided document excerpts.
+   - You MUST NOT use external pre-training knowledge, outside assumptions, or unmentioned facts.
+   - Never speculate, extrapolate, or invent information not directly present in the text.
+
+2. ABSOLUTE REFUSAL (NO EXTERNAL ANSWERS):
+   - If the provided document excerpts do not contain the answer, or if the question asks about a topic not covered in the document, you MUST explicitly state:
+     "The provided document(s) do not contain information to answer this question."
+   - DO NOT provide answers from external knowledge, web search, or training data when the information is absent from the provided document.
+
+3. MANDATORY CITATIONS:
+   - For every factual statement, definition, or explanation derived from the document, cite the exact source and page number in brackets: `[Page X]` or `[source_filename, Page X]`.
+
+4. MATHEMATICAL AND CODE NOTATION:
+   - Format display/block formulas with double dollar signs on their own lines: `$$ <equation> $$`.
+   - Format inline expressions with single dollar signs: `$ <var> $`.
+   - Never output raw HTML tags like `<br>`, `<p>`, `<hr>`. Use clean standard Markdown.
+"""
+
+
 class AcademicRAGEngine:
     """
     Intelligent Multi-Tool Academic Engine.
@@ -454,24 +478,92 @@ class AcademicRAGEngine:
         return f"Unknown tool: {tool_name}", []
 
     def generate_answer_stream(
-        self, query: str, history: List[Dict] = None
+        self, query: str, history: List[Dict] = None, strict_mode: bool = True
     ) -> Generator[Tuple[Dict[str, Any], List[DocumentChunk]], None, None]:
         """
-        Agentic multi-tool response stream.
-        Autonomously selects tools or directly synthesizes answers with high accuracy.
-        Yields events: {'type': 'tool_start'|'tool_end'|'token', ...}
+        Stream responses with either Strict Grounded RAG or Open Multi-Tool Agent.
+        In Strict Mode (default): answers are strictly grounded in uploaded documents
+        with zero external knowledge or hallucinations. If not in the document, it strictly refuses.
         """
         if not self.client:
             yield ({"type": "token", "content": "⚠️ **Groq API Key is not configured.** Please check your `.env` file."}, [])
             return
 
+        # =====================================================================
+        # STRICT RAG (GROUNDED MODE): Exclusively relies on uploaded documents
+        # =====================================================================
+        if strict_mode:
+            # 1. Documents are strictly required in Grounded Mode
+            if not self.chunks:
+                yield ({"type": "token", "content": "⚠️ **No documents uploaded.** In Strict RAG (Grounded Mode), answers are generated exclusively from your uploaded documents. Please upload one or more PDFs in the sidebar to ask questions."}, [])
+                return
+
+            # 2. Retrieve relevant document excerpts
+            retrieved = self.retrieve(query, top_k=6)
+            used_chunks: List[DocumentChunk] = []
+            context_blocks: List[str] = []
+
+            for c, score in retrieved:
+                if score > 0.03:
+                    used_chunks.append(c)
+                    context_blocks.append(f"--- [Source: {c.source} | Page {c.page}] ---\n{c.text}")
+
+            if not used_chunks and retrieved and retrieved[0][1] > 0.005:
+                for c, _ in retrieved[:2]:
+                    used_chunks.append(c)
+                    context_blocks.append(f"--- [Source: {c.source} | Page {c.page}] ---\n{c.text}")
+
+            context_text = "\n\n".join(context_blocks) if context_blocks else "[No relevant document excerpts found in uploaded files for this query]"
+
+            yield ({"type": "tool_start", "name": "search_document", "args": {"query": query}}, used_chunks)
+            yield ({"type": "tool_end", "name": "search_document", "preview": f"Retrieved {len(used_chunks)} grounded excerpt(s)"}, used_chunks)
+
+            messages = [{"role": "system", "content": STRICT_RAG_SYSTEM_PROMPT}]
+            if history:
+                for turn in history[-4:]:
+                    messages.append({"role": turn["role"], "content": turn["content"]})
+
+            user_content = f"""DOCUMENT EXCERPTS:
+{context_text}
+
+USER QUESTION:
+{query}
+
+CRITICAL INSTRUCTION:
+Answer the question using strictly and exclusively the facts in the document excerpts above.
+If the answer is not present in the excerpts, you MUST answer:
+"The provided document(s) do not contain information to answer this question."
+Do NOT provide answers from external knowledge or the web."""
+
+            messages.append({"role": "user", "content": user_content})
+
+            try:
+                stream_resp = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=0.0,
+                    stream=True
+                )
+
+                for chunk in stream_resp:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        delta = chunk.choices[0].delta.content
+                        yield ({"type": "token", "content": delta}, used_chunks)
+
+            except Exception as e:
+                yield ({"type": "token", "content": f"\n\n**Error querying model:** {str(e)}"}, used_chunks)
+            return
+
+        # =====================================================================
+        # OPEN AGENTIC MODE: Multi-tool loop (Math, Web, Wikipedia, YouTube)
+        # =====================================================================
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
         if history:
             for turn in history[-6:]:
                 messages.append({"role": turn["role"], "content": turn["content"]})
         messages.append({"role": "user", "content": query})
 
-        used_chunks: List[DocumentChunk] = []
+        used_chunks = []
 
         try:
             max_turns = 4
@@ -513,11 +605,8 @@ class AcademicRAGEngine:
                             "name": fn_name,
                             "content": tool_result
                         })
-                    # Loop back so model can decide if subsequent tools or final synthesis are needed
                 else:
-                    # Model has finished tool calls and formulated final response
                     direct_content = assistant_msg.content or ""
-                    # Stream tokens in smooth chunks for clean typewriter UI rendering
                     chunk_size = 24
                     for i in range(0, len(direct_content), chunk_size):
                         yield ({"type": "token", "content": direct_content[i:i+chunk_size]}, used_chunks)
