@@ -7,6 +7,9 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
+# Ensure mock key exists for testing in isolated CI/CD environments
+os.environ.setdefault("GROQ_API_KEY", "gsk_mock_ci_test_key_00000000000000000000")
+
 
 @pytest.fixture
 def sample_academic_text():

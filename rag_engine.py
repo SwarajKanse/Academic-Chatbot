@@ -506,10 +506,6 @@ class AcademicRAGEngine:
         In Strict Mode (default): answers are strictly grounded in uploaded documents
         with zero external knowledge or hallucinations. If not in the document, it strictly refuses.
         """
-        if not self.client:
-            yield ({"type": "token", "content": "⚠️ **Groq API Key is not configured.** Please check your `.env` file."}, [])
-            return
-
         # =====================================================================
         # STRICT RAG (GROUNDED MODE): Exclusively relies on uploaded documents
         # =====================================================================
@@ -519,6 +515,11 @@ class AcademicRAGEngine:
                 yield ({"type": "token", "content": "⚠️ **No documents uploaded.** In Strict RAG (Grounded Mode), answers are generated exclusively from your uploaded documents. Please upload one or more PDFs in the sidebar to ask questions."}, [])
                 return
 
+        if not self.client:
+            yield ({"type": "token", "content": "⚠️ **Groq API Key is not configured.** Please check your `.env` file."}, [])
+            return
+
+        if strict_mode:
             used_chunks: List[DocumentChunk] = []
             context_blocks: List[str] = []
 

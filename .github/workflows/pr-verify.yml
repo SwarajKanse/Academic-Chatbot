@@ -17,5 +17,7 @@ jobs:
         run: |
           pip install -r requirements.txt pytest
       - name: Run fast tests
+        env:
+          GROQ_API_KEY: "gsk_mock_ci_pipeline_key_for_testing_00000"
         run: |
           pytest tests/ -v
