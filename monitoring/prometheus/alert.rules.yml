@@ -1,0 +1,29 @@
+groups:
+  - name: academic_chatbot_alerts
+    rules:
+      - alert: ChatbotServiceDown
+        expr: up{job="academic-chatbot"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Academic Chatbot instance is unreachable"
+          description: "Chatbot instance at {{ $labels.instance }} has been down for over 30 seconds."
+
+      - alert: HighQueryLatency
+        expr: histogram_quantile(0.95, rate(chatbot_query_duration_seconds_bucket[5m])) > 5.0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RAG pipeline P95 query latency > 5s"
+          description: "95th percentile latency is currently {{ $value }}s on {{ $labels.instance }}."
+
+      - alert: ElevatedRefusalRate
+        expr: rate(chatbot_rag_refusals_total[5m]) > 2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Unusual surge in Strict RAG out-of-domain refusals"
+          description: "Grounded refusals exceed 2 per second over 5 minutes."
