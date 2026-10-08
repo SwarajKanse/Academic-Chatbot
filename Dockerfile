@@ -51,7 +51,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     rm -rf /wheels
 
 # Copy application source code
-COPY --chown=appuser:appgroup app.py rag_engine.py ./
+COPY --chown=appuser:appgroup app.py rag_engine.py entrypoint.py ./
 COPY --chown=appuser:appgroup .streamlit/ .streamlit/
 COPY --chown=appuser:appgroup monitoring/ monitoring/
 
@@ -62,8 +62,8 @@ USER appuser
 EXPOSE 8501 8000
 
 # Standard OCI Healthcheck
-HEALTHCHECK --interval=20s --timeout=5s --start-period=15s --retries=3 \
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8501/_stcore/health || exit 1
 
-# Launch application
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Launch application via bootstrap entrypoint
+CMD ["python", "entrypoint.py"]

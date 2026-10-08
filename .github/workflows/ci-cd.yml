@@ -77,10 +77,10 @@ jobs:
           python monitoring/nagios/check_chatbot_health.py --help
 
   # ============================================================================
-  # 3. Docker Container Build & Security Verification
+  # 3. Docker Container Build & Multi-Service Compose Smoke Test
   # ============================================================================
-  docker-build-verify:
-    name: Docker Build & Container Audit
+  docker-build-and-smoke-test:
+    name: Docker Build & Multi-Service Smoke Test
     runs-on: ubuntu-latest
     needs: test-suite
     steps:
@@ -110,31 +110,19 @@ jobs:
           fi
           echo "PASSED: Container runs as non-root user (UID $USER_ID)"
 
-  # ============================================================================
-  # 4. Multi-Service Stack Deployment & Health Verification
-  # ============================================================================
-  compose-stack-smoke-test:
-    name: Docker Compose Multi-Service Smoke Test
-    runs-on: ubuntu-latest
-    needs: docker-build-verify
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
       - name: Launch Multi-Service Stack (Chatbot + Prometheus + Grafana)
         run: |
           docker compose up -d academic-chatbot prometheus grafana
-          echo "Waiting 25 seconds for service warm-up and healthcheck..."
-          sleep 25
+          echo "Waiting 12 seconds for service warm-up..."
+          sleep 12
 
-      - name: Validate Container Health
+      - name: Validate Container Health & Ports
         run: |
           docker compose ps
-          # Check health of academic-chatbot
           STATUS=$(docker inspect --format='{{json .State.Health.Status}}' academic-chatbot-app || echo '"unknown"')
           echo "Academic Chatbot health status: $STATUS"
 
-      - name: Validate Nagios Health Check
+      - name: Validate Nagios Health Check Plugin
         run: |
           python3 monitoring/nagios/check_chatbot_health.py -H localhost -p 8501 -m 8000 --check-metrics
 
@@ -142,3 +130,4 @@ jobs:
         if: always()
         run: |
           docker compose down -v
+

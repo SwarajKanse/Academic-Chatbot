@@ -46,8 +46,7 @@ services:
       - "--storage.tsdb.retention.time=15d"
       - "--web.enable-lifecycle"
     depends_on:
-      academic-chatbot:
-        condition: service_healthy
+      - academic-chatbot
     networks:
       - academic-net
 
