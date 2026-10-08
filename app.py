@@ -10,6 +10,22 @@ if current_dir not in sys.path:
 
 from rag_engine import AcademicRAGEngine
 
+# Operational Observability & Metrics
+try:
+    import time
+    from monitoring.metrics import (
+        start_metrics_server,
+        record_query,
+        record_refusal,
+        update_document_metrics
+    )
+    start_metrics_server(port=8000)
+except ImportError:
+    start_metrics_server = None
+    record_query = lambda *args, **kwargs: None
+    record_refusal = lambda *args, **kwargs: None
+    update_document_metrics = lambda *args, **kwargs: None
+
 
 def format_academic_markdown(text: str) -> str:
     """
@@ -167,6 +183,7 @@ with st.sidebar:
         if current_names != st.session_state.indexed_files:
             with st.spinner("Reading documents..."):
                 engine.load_documents(uploaded_files)
+            update_document_metrics(len(uploaded_files), len(engine.chunks))
             st.session_state.indexed_files = current_names
             st.rerun()
 
@@ -239,6 +256,7 @@ if prompt:
         used_chunks = []
         tools = []
 
+        t_query_start = time.time()
         stream = engine.generate_answer_stream(
             query=prompt,
             history=st.session_state.messages[:-1],
@@ -260,6 +278,11 @@ if prompt:
                 answer_slot.markdown(format_academic_markdown(answer) + " ▍", unsafe_allow_html=True)
             if retrieved_chunks:
                 used_chunks = retrieved_chunks
+
+        query_duration = time.time() - t_query_start
+        record_query(mode="grounded" if strict_mode else "standard", duration=query_duration, success=True)
+        if strict_mode and any(phrase in answer.lower() for phrase in ["does not contain", "insufficient information", "not found in"]):
+            record_refusal(reason="unsupported_in_context")
 
         answer_slot.markdown(format_academic_markdown(answer), unsafe_allow_html=True)
         sources = [c.to_dict() for c in used_chunks]

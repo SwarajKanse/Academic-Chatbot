@@ -1,0 +1,28 @@
+# Prometheus Configuration for Academic Chatbot Stack
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+  scrape_timeout: 4s
+
+rule_files:
+  - "alert.rules.yml"
+
+scrape_configs:
+  - job_name: "academic-chatbot"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["academic-chatbot:8000"]
+        labels:
+          environment: "production"
+          service: "rag-service"
+          app: "academic-chatbot"
+
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels:
+          service: "container-telemetry"
