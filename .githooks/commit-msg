@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Git Commit Message Hook: Enforce Jira Issue Key and Conventional Commits
+# Formats accepted:
+#   feat: [ACAD-101] add multi-stage dockerfile
+#   [ACAD-101] #comment Add multi-stage dockerfile #resolve
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(head -n 1 "$COMMIT_MSG_FILE")
+
+# Check for Jira issue tag [ACAD-XXX]
+if ! grep -qE "\[ACAD-[0-9]+\]|Merge|merge" "$COMMIT_MSG_FILE"; then
+    echo "================================================================="
+    echo " [GIT HOOK ERROR] Invalid Commit Message Format!"
+    echo " Every commit must reference a Jira issue key: [ACAD-XXX]"
+    echo " Example: 'feat: [ACAD-101] optimize dockerfile layer caching'"
+    echo "================================================================="
+    exit 1
+fi
+
+exit 0

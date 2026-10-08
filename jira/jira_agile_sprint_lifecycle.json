@@ -1,0 +1,157 @@
+{
+  "project": {
+    "key": "ACAD",
+    "name": "Academic Chatbot DevOps & AI Platform",
+    "projectTypeKey": "software",
+    "description": "Agile lifecycle, DevOps automation, and production monitoring for the Academic Chatbot RAG system.",
+    "lead": "swarajkanse2@gmail.com",
+    "components": [
+      {"name": "RAG-Core", "lead": "swarajkanse2@gmail.com"},
+      {"name": "Frontend-UI", "lead": "swarajkanse2@gmail.com"},
+      {"name": "Docker-Infra", "lead": "mokashiadit@gmail.com"},
+      {"name": "CI-CD-Automation", "lead": "mokashiadit@gmail.com"},
+      {"name": "Monitoring-SRE", "lead": "aryanpformal@gmail.com"}
+    ]
+  },
+  "team_members": [
+    {
+      "name": "Swaraj Kanse",
+      "email": "swarajkanse2@gmail.com",
+      "role": "Product Owner & Lead AI Architect"
+    },
+    {
+      "name": "Adit Mokashi",
+      "email": "mokashiadit@gmail.com",
+      "role": "Scrum Master & DevOps Automation Engineer"
+    },
+    {
+      "name": "Aryan P",
+      "email": "aryanpformal@gmail.com",
+      "role": "SRE & Quality Assurance Engineer"
+    }
+  ],
+  "sprints": [
+    {
+      "id": 1,
+      "name": "Sprint 1: Core Grounded RAG & Semantic Retrieval",
+      "state": "CLOSED",
+      "startDate": "2026-09-15T09:00:00Z",
+      "endDate": "2026-09-29T18:00:00Z",
+      "goal": "Build robust TF-IDF retrieval, multi-format PDF parsing, and strict grounded refusal system."
+    },
+    {
+      "id": 2,
+      "name": "Sprint 2: UI/UX Redesign & Academic Formula Rendering",
+      "state": "CLOSED",
+      "startDate": "2026-09-29T09:00:00Z",
+      "endDate": "2026-10-06T18:00:00Z",
+      "goal": "Implement editorial light theme, multi-line LaTeX equations, and document telemetry."
+    },
+    {
+      "id": 3,
+      "name": "Sprint 3: Dockerization, Multi-Service Compose & Jenkins CI/CD",
+      "state": "ACTIVE",
+      "startDate": "2026-10-06T09:00:00Z",
+      "endDate": "2026-10-13T18:00:00Z",
+      "goal": "Multi-stage Dockerfile, docker-compose orchestration, Jenkins pipeline, and GitHub Actions."
+    },
+    {
+      "id": 4,
+      "name": "Sprint 4: Observability, Prometheus, Grafana & Nagios Monitoring",
+      "state": "ACTIVE",
+      "startDate": "2026-10-06T09:00:00Z",
+      "endDate": "2026-10-13T18:00:00Z",
+      "goal": "Instrumentation with Prometheus metrics exporter, Grafana dashboards, and Nagios health plugins."
+    }
+  ],
+  "issues": [
+    {
+      "key": "ACAD-101",
+      "summary": "Implement Multi-Stage Dockerfile with Non-Root Security User",
+      "issueType": "Story",
+      "epic": "ACAD-EPIC-3",
+      "sprint": "Sprint 3",
+      "assignee": "mokashiadit@gmail.com",
+      "storyPoints": 5,
+      "status": "Done",
+      "description": "Create an optimized multi-stage Python 3.11-slim Dockerfile separating wheel compilation from the runtime image and executing as non-root user appuser (UID 1000)."
+    },
+    {
+      "key": "ACAD-102",
+      "summary": "Orchestrate Multi-Service Architecture with Docker Compose",
+      "issueType": "Story",
+      "epic": "ACAD-EPIC-3",
+      "sprint": "Sprint 3",
+      "assignee": "mokashiadit@gmail.com",
+      "storyPoints": 5,
+      "status": "Done",
+      "description": "Assemble docker-compose.yml linking academic-chatbot, Prometheus, Grafana, and cAdvisor with persistent storage and custom bridge network."
+    },
+    {
+      "key": "ACAD-103",
+      "summary": "Configure Containerized Jenkins LTS Pipeline with Declarative Jenkinsfile",
+      "issueType": "Story",
+      "epic": "ACAD-EPIC-4",
+      "sprint": "Sprint 3",
+      "assignee": "swarajkanse2@gmail.com",
+      "storyPoints": 8,
+      "status": "Done",
+      "description": "Develop 7-stage declarative Jenkinsfile covering checkout, static analysis, unit testing, docker build, security audit, deployment, and Nagios verification."
+    },
+    {
+      "key": "ACAD-104",
+      "summary": "Automate GitHub Actions Continuous Integration and Deployment Pipeline",
+      "issueType": "Story",
+      "epic": "ACAD-EPIC-4",
+      "sprint": "Sprint 3",
+      "assignee": "swarajkanse2@gmail.com",
+      "storyPoints": 5,
+      "status": "Done",
+      "description": "Establish .github/workflows/ci-cd.yml and pr-verify.yml to execute automated linting, test suites, docker builds, and compose healthchecks on push and PR."
+    },
+    {
+      "key": "ACAD-105",
+      "summary": "Instrument Python Application with Prometheus Metrics Exporter",
+      "issueType": "Story",
+      "epic": "ACAD-EPIC-5",
+      "sprint": "Sprint 4",
+      "assignee": "aryanpformal@gmail.com",
+      "storyPoints": 5,
+      "status": "Done",
+      "description": "Add prometheus_client metrics to record throughput, query latency histograms, grounded refusal counters, and active document gauges on port 8000."
+    },
+    {
+      "key": "ACAD-106",
+      "summary": "Design Production Grafana Dashboard with Real-Time SRE Telemetry",
+      "issueType": "Story",
+      "epic": "ACAD-EPIC-5",
+      "sprint": "Sprint 4",
+      "assignee": "aryanpformal@gmail.com",
+      "storyPoints": 5,
+      "status": "Done",
+      "description": "Construct automated Grafana provisioning with Prometheus data source and rich JSON dashboard visualizing latency percentiles (P95/P50) and refusal rates."
+    },
+    {
+      "key": "ACAD-107",
+      "summary": "Develop Nagios Core Monitoring Plugin and Service Definitions",
+      "issueType": "Story",
+      "epic": "ACAD-EPIC-5",
+      "sprint": "Sprint 4",
+      "assignee": "aryanpformal@gmail.com",
+      "storyPoints": 3,
+      "status": "Done",
+      "description": "Write check_chatbot_health.py complying with Nagios plugin API (exit codes 0/1/2/3 and perfdata output) and chatbot_service.cfg configuration."
+    },
+    {
+      "key": "ACAD-108",
+      "summary": "Enforce Jira Smart Commit Git Hooks and Branching Conventions",
+      "issueType": "Story",
+      "epic": "ACAD-EPIC-4",
+      "sprint": "Sprint 3",
+      "assignee": "swarajkanse2@gmail.com",
+      "storyPoints": 3,
+      "status": "Done",
+      "description": "Implement .githooks/commit-msg and pre-commit hooks validating issue ticket format and automated Conventional Commit tagging."
+    }
+  ]
+}
