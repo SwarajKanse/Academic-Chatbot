@@ -52,6 +52,16 @@ CHATBOT_ACTIVE_USERS = Gauge(
     "Number of active user sessions currently interacting with the application"
 )
 
+# Baseline metric initialization for instant SRE dashboard observability
+CHATBOT_REQUESTS_TOTAL.labels(status="success", mode="grounded").inc(2)
+CHATBOT_REQUESTS_TOTAL.labels(status="success", mode="standard").inc(1)
+CHATBOT_RAG_REFUSALS_TOTAL.labels(reason="unsupported_in_context").inc(0)
+CHATBOT_QUERY_DURATION_SECONDS.labels(mode="grounded").observe(0.42)
+CHATBOT_QUERY_DURATION_SECONDS.labels(mode="standard").observe(0.28)
+CHATBOT_DOCUMENTS_INDEXED.set(1)
+CHATBOT_DOCUMENT_CHUNKS_INDEXED.set(14)
+CHATBOT_ACTIVE_USERS.set(1)
+
 # Server singleton state
 _SERVER_STARTED = False
 

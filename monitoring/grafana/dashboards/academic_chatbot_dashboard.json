@@ -93,7 +93,7 @@
       },
       "targets": [
         {
-          "expr": "sum(chatbot_requests_total)",
+          "expr": "sum(chatbot_requests_total) or vector(0)",
           "refId": "A"
         }
       ],
@@ -126,7 +126,7 @@
       },
       "targets": [
         {
-          "expr": "sum(chatbot_rag_refusals_total)",
+          "expr": "sum(chatbot_rag_refusals_total) or vector(0)",
           "refId": "A"
         }
       ],
