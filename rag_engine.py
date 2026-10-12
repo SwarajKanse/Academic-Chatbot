@@ -608,30 +608,55 @@ Do NOT provide answers from external knowledge or the web."""
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
         if history:
             for turn in history[-6:]:
-                messages.append({"role": turn["role"], "content": turn["content"]})
+                content = str(turn.get("content", "")).strip()
+                role = turn.get("role", "user")
+                if content and role in ("user", "assistant"):
+                    messages.append({"role": role, "content": content})
         messages.append({"role": "user", "content": query})
 
         used_chunks = []
+        accumulated_tool_results = []
+        tokens_yielded = 0
 
         try:
-            max_turns = 4
+            max_turns = 3
             current_turn = 0
 
             while current_turn < max_turns:
                 current_turn += 1
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    tools=STUDENT_TOOLS,
-                    tool_choice="auto",
-                    temperature=0.1
-                )
+
+                force_synthesis = (current_turn == max_turns)
+                create_kwargs = {
+                    "model": self.model,
+                    "messages": messages,
+                    "temperature": 0.1
+                }
+                if not force_synthesis:
+                    create_kwargs["tools"] = STUDENT_TOOLS
+                    create_kwargs["tool_choice"] = "auto"
+                else:
+                    create_kwargs["tool_choice"] = "none"
+
+                response = self.client.chat.completions.create(**create_kwargs)
 
                 assistant_msg = response.choices[0].message
                 tool_calls = assistant_msg.tool_calls
 
-                if tool_calls:
-                    messages.append(assistant_msg)
+                if tool_calls and not force_synthesis:
+                    tool_calls_dict = [{
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments
+                        }
+                    } for tc in tool_calls]
+                    messages.append({
+                        "role": "assistant",
+                        "content": assistant_msg.content or "",
+                        "tool_calls": tool_calls_dict
+                    })
+
                     for tc in tool_calls:
                         fn_name = tc.function.name
                         try:
@@ -645,6 +670,7 @@ Do NOT provide answers from external knowledge or the web."""
                         if chunks:
                             used_chunks.extend(chunks)
 
+                        accumulated_tool_results.append(tool_result)
                         yield ({"type": "tool_end", "name": fn_name, "preview": tool_result[:140]}, used_chunks)
 
                         messages.append({
@@ -654,11 +680,24 @@ Do NOT provide answers from external knowledge or the web."""
                             "content": tool_result
                         })
                 else:
-                    direct_content = assistant_msg.content or ""
-                    chunk_size = 24
-                    for i in range(0, len(direct_content), chunk_size):
-                        yield ({"type": "token", "content": direct_content[i:i+chunk_size]}, used_chunks)
+                    direct_content = (assistant_msg.content or "").strip()
+                    if direct_content:
+                        chunk_size = 24
+                        for i in range(0, len(direct_content), chunk_size):
+                            tokens_yielded += 1
+                            yield ({"type": "token", "content": direct_content[i:i+chunk_size]}, used_chunks)
                     break
+
+            # Guaranteed Fallback: If no tokens were streamed, synthesize from tool results or provide clear statement
+            if tokens_yielded == 0:
+                if accumulated_tool_results:
+                    fallback_text = "\n\n".join(accumulated_tool_results)
+                else:
+                    fallback_text = "I processed your request, but no specific response was generated. You can ask any academic questions, solve equations, or upload notes in the sidebar."
+
+                chunk_size = 24
+                for i in range(0, len(fallback_text), chunk_size):
+                    yield ({"type": "token", "content": fallback_text[i:i+chunk_size]}, used_chunks)
 
         except Exception as e:
             yield ({"type": "token", "content": f"\n\n**Error querying model:** {str(e)}"}, used_chunks)

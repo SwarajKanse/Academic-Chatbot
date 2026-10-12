@@ -256,10 +256,16 @@ if prompt:
         used_chunks = []
         tools = []
 
+        clean_history = [
+            {"role": m["role"], "content": m["content"]}
+            for m in st.session_state.messages[:-1]
+            if m.get("content") and str(m["content"]).strip()
+        ]
+
         t_query_start = time.time()
         stream = engine.generate_answer_stream(
             query=prompt,
-            history=st.session_state.messages[:-1],
+            history=clean_history,
             strict_mode=strict_mode
         )
         for event, retrieved_chunks in stream:
@@ -278,6 +284,9 @@ if prompt:
                 answer_slot.markdown(format_academic_markdown(answer) + " ▍", unsafe_allow_html=True)
             if retrieved_chunks:
                 used_chunks = retrieved_chunks
+
+        if not answer.strip():
+            answer = "I processed your request, but no response was generated. Feel free to rephrase or ask any academic question."
 
         query_duration = time.time() - t_query_start
         record_query(mode="grounded" if strict_mode else "standard", duration=query_duration, success=True)
